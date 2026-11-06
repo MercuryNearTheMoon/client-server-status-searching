@@ -16,9 +16,46 @@ void sysinfo_log_set_level(enum sysinfo_log_level level);
  */
 void sysinfo_log(enum sysinfo_log_level level, const char *format, ...);
 
-/* Compile-time switch: -DENABLE_DEBUG=1. Disabled calls do not evaluate args. */
-#if defined(ENABLE_DEBUG) && ENABLE_DEBUG
-#define SYSINFO_DEBUG(...) sysinfo_log(SYSINFO_LOG_DEBUG, __VA_ARGS__)
+/* Compile-time threshold: -1=off, 0=error, 1=warn, 2=info, 3=debug.
+ * Until logger.c is implemented, use stderr directly. Set SYSINFO_USE_LOGGER=1
+ * once the real backend is implemented. Disabled calls do not evaluate args.
+ */
+#ifndef SYSINFO_COMPILE_LOG_LEVEL
+#define SYSINFO_COMPILE_LOG_LEVEL 2
+#endif
+#if SYSINFO_COMPILE_LOG_LEVEL < -1 || SYSINFO_COMPILE_LOG_LEVEL > 3
+#error "SYSINFO_COMPILE_LOG_LEVEL must be -1..3"
+#endif
+
+#if defined(SYSINFO_USE_LOGGER) && SYSINFO_USE_LOGGER
+#define SYSINFO_LOG_WRITE(level, label, ...) sysinfo_log(level, __VA_ARGS__)
+#else
+#include <stdio.h>
+#define SYSINFO_LOG_WRITE(level, label, ...) \
+    do { \
+        fprintf(stderr, "[%s] ", label); \
+        fprintf(stderr, __VA_ARGS__); \
+        fputc('\n', stderr); \
+    } while (0)
+#endif
+
+#if SYSINFO_COMPILE_LOG_LEVEL >= 0
+#define SYSINFO_ERROR_LOG(...) SYSINFO_LOG_WRITE(SYSINFO_LOG_ERROR, "ERROR", __VA_ARGS__)
+#else
+#define SYSINFO_ERROR_LOG(...) ((void)0)
+#endif
+#if SYSINFO_COMPILE_LOG_LEVEL >= 1
+#define SYSINFO_WARN_LOG(...) SYSINFO_LOG_WRITE(SYSINFO_LOG_WARN, "WARN", __VA_ARGS__)
+#else
+#define SYSINFO_WARN_LOG(...) ((void)0)
+#endif
+#if SYSINFO_COMPILE_LOG_LEVEL >= 2
+#define SYSINFO_INFO_LOG(...) SYSINFO_LOG_WRITE(SYSINFO_LOG_INFO, "INFO", __VA_ARGS__)
+#else
+#define SYSINFO_INFO_LOG(...) ((void)0)
+#endif
+#if defined(ENABLE_DEBUG) && ENABLE_DEBUG && SYSINFO_COMPILE_LOG_LEVEL >= 3
+#define SYSINFO_DEBUG(...) SYSINFO_LOG_WRITE(SYSINFO_LOG_DEBUG, "DEBUG", __VA_ARGS__)
 #else
 #define SYSINFO_DEBUG(...) ((void)0)
 #endif

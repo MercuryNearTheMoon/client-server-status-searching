@@ -16,8 +16,11 @@ LIBRARY := $(BUILD_DIR)/lib/libcommon.so
 CLIENT := $(BUILD_DIR)/client
 SERVER := $(BUILD_DIR)/server
 
-.PHONY: all objects clean
+.PHONY: all objects clean test
 all: $(CLIENT) $(SERVER)
+
+test:
+	CC="$(CC)" sh scripts/ci-local.sh "$(if $(UNIT),$(UNIT),all)"
 
 # Useful while source files are still skeletons without main().
 objects: $(OBJECTS)

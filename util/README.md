@@ -1,7 +1,8 @@
 # 共用函式庫
 
 此目錄存放 client 與 server 共用的 header，以及對應的 `.c` 骨架。
-目前僅宣告介面，`.c` 只有 include 與 TODO，尚未實作函式或產生 `libcommon.so`。
+`protocol.c` 已實作 header 編解碼；`io.c` 與 `logger.c` 仍是 TODO 骨架。
+尚未完成整個共用函式庫。
 
 - `common.h`：預設 port、payload 限制與共用回傳碼。
 - `protocol.h`：訊息 header、指令編號與編解碼介面。

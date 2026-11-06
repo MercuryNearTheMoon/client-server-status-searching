@@ -1,13 +1,66 @@
 # Midterm Linux 開發環境
 
+## 本機 unit test / CI
+
+在專案根目錄執行，macOS 或 Linux 皆可，不需要 Docker：
+
+```sh
+make test
+# 只測一個 unit
+make test UNIT=util/protocol
+make test UNIT=util/logger
+# 等同於
+sh scripts/ci-local.sh
+sh scripts/ci-local.sh util/protocol
+```
+
+腳本以 C11 與 `-Werror` 編譯。Protocol unit 包含 12 個 encode 測項、
+15 個 decode 測項與 1 個 round-trip 測項，共 28 個。
+涵蓋固定 wire bytes、邊界值、非法欄位、NULL 指標、不對齊輸入，
+以及拒絕輸入時 output 不變。失敗時回傳非零 exit code。
+Encode 與 decode 均已實作；其餘應用程式功能仍為骨架。
+
+測試依照 source 路徑拆分：`test/util/protocol.c` 測試 `util/protocol.c`，
+`test/util/logger.c` 獨立驗證 `util/logger.h` 的巨集過濾（正式 backend 尚未實作）。
+每個測試檔案有自己的 `main()`，可獨立編譯執行。
+未實作的 io、client、server 尚無測試；之後沿用相同路徑並加入腳本的 unit 清單。
+
+測試矩陣包含 `ENABLE_DEBUG=0/1` 與五種編譯期 log level；logger unit 驗證 stderr
+的等級過濾。最後執行 AddressSanitizer 與 UndefinedBehaviorSanitizer。
+各組 stdout/stderr 保存在 `build/tests/<unit>/`。若編譯器不支援 sanitizer，可明確使用
+`SANITIZE=0 make test`；可用 `make test CC=clang` 選擇編譯器。
+CI runner 也能執行同一個腳本，目前沒有部署步驟。
+
+### 暫時的 log 抽象
+
+已移除 mock logger；`util/logger.c` 仍未實作。
+`logger.h` 的 log 巨集目前直接輸出 stderr，以
+`SYSINFO_COMPILE_LOG_LEVEL` 選擇保留的等級：
+`-1` 關閉、`0` error、`1` warn、`2` info（預設）、`3` debug。
+debug 另外要求 `ENABLE_DEBUG=1`，各等級包含較嚴重的訊息。
+目前不支援 runtime level 切換。
+
+例如只編譯一份 debug 測試並查看診斷輸出：
+
+```sh
+mkdir -p build
+cc -std=c11 -Wall -Wextra -Wpedantic -I. \
+  -DENABLE_DEBUG=1 -DSYSINFO_COMPILE_LOG_LEVEL=3 \
+  test/util/protocol.c util/protocol.c -o build/test-protocol
+./build/test-protocol
+```
+
+之後實作 `sysinfo_log()`，可設定 `SYSINFO_USE_LOGGER=1` 並連結
+`util/logger.c`，讓相同巨集改呼叫正式 logger。
+
 使用 Docker Compose 提供 `compile`、`server`、`client` 三個容器服務。
 三者使用相同 Debian 開發映像，包含 GCC、Make、CMake、GDB、
 `readelf`、`ps`、`ss` 與 `tcpdump`，並將專案掛載至 `/workspace`。
-目前包含容器環境、Makefile 與 C 程式骨架，尚未實作函式。
+目前包含容器環境、Makefile、protocol header 編解碼與其他 C 程式骨架。
 
 程式結構：`client/main.c` 放 client 流程，`server/main.c` 放 server 流程、
 sysinfo 查詢與 shared-memory lazy TTL cache；共用介面及 `.c` 骨架放在 `util/`。
-目前 `.c` 僅有 include 與 TODO，尚不能連結成執行檔。
+目前 client/server 的 `main.c` 僅有 include 與 TODO，尚不能連結成應用程式執行檔。
 
 ## 建立環境與編譯
 
