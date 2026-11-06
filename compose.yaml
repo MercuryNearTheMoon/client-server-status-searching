@@ -1,0 +1,27 @@
+x-dev: &dev
+  image: midterm-dev:local
+  build:
+    context: .
+  working_dir: /workspace
+  volumes:
+    - .:/workspace
+  init: true
+
+services:
+  compile:
+    <<: *dev
+    profiles: [tools]
+    command: ["make"]
+
+  server:
+    <<: *dev
+    command: ["/workspace/build/server"]
+    ports:
+      - "127.0.0.1:${SERVER_PORT:-8080}:8080"
+
+  client:
+    <<: *dev
+    profiles: [tools]
+    command: ["/workspace/build/client", "--host", "server", "--port", "8080"]
+    stdin_open: true
+    tty: true

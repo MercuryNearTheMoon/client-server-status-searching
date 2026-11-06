@@ -1,0 +1,8 @@
+.DS_Store
+/build/
+*.o
+*.d
+*.so
+*.so.*
+*.log
+.env
