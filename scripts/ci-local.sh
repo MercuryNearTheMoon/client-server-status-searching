@@ -4,16 +4,22 @@ set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 compiler=${CC:-cc}
 if [ "$#" -gt 1 ]; then
-    echo "Usage: sh scripts/ci-local.sh [all|util/protocol|util/logger|util/io]" >&2
+    echo "Usage: sh scripts/ci-local.sh [all|util/protocol|util/logger|util/io|server/main]" >&2
     exit 2
 fi
 case "${1:-all}" in
-    all|'') units='util/protocol util/logger util/io' ;;
-    util/protocol|util/logger|util/io) units=$1 ;;
-    *) echo "Unknown unit: $1 (available: util/protocol, util/logger, util/io)" >&2; exit 2 ;;
+    all|'') units='util/protocol util/logger util/io'
+        if [ "$(uname -s)" = Linux ]; then units="$units server/main";
+        else echo 'SKIP server/main: Linux required; run in Docker'; fi ;;
+    util/protocol|util/logger|util/io|server/main) units=$1 ;;
+    *) echo "Unknown unit: $1 (available: util/protocol, util/logger, util/io, server/main)" >&2; exit 2 ;;
 esac
 
 for unit in $units; do
+    if [ "$unit" = server/main ]; then
+        sh scripts/ci-server.sh
+        continue
+    fi
     set -- "test/$unit.c" "$unit.c"
     if [ "$unit" != util/logger ]; then
         set -- "$@" util/logger.c

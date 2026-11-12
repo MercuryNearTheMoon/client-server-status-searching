@@ -5,6 +5,10 @@ RUN apt-get update \
         build-essential cmake gdb binutils procps iproute2 tcpdump ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
 ENV LD_LIBRARY_PATH=/workspace/util:/workspace/build/lib:/workspace/lib
 CMD ["bash"]
