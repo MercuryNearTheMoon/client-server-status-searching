@@ -87,7 +87,7 @@ SIGTERM/SIGINT 停止 accept，終止並回收所有 child，再移除 cache。
 透過 Linux /proc 獨立檢查 child PIDs 與回收，不使用正式 client 實作互相驗證。
 
 測試先跑一般建置，再以 ASan/UBSan 重跑；`SANITIZE=0` 可明確略過。
-目前不包含 tcpdump 證據與整份作業的 robustness before/after demo。
+實際 tcpdump 證據、分析與獨立 robustness before/after demo 見 `submission/`。
 
 ## 本次驗證
 
@@ -99,4 +99,4 @@ SIGTERM/SIGINT 停止 accept，終止並回收所有 child，再移除 cache。
 - `ldd build/server` 確認載入 `/workspace/build/lib/libcommon.so`。
 
 測試紀錄在忽略提交的 `build/server-tests.log` 與
-`build/server-linux-validation.log`；沒有產生封包擷取證據。
+`build/server-linux-validation.log`。後續完整測試與封包證據另存 `submission/evidence/`。

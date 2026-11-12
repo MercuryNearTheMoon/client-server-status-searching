@@ -16,7 +16,7 @@ for mode in normal sanitized; do
     "$directory/unit"
     if [ "$(uname -s)" = Linux ]; then
         make -B CC="$compiler" BUILD_DIR="$directory/app" CFLAGS="$flags" LDFLAGS="$link" all
-        python3 test/client/integration.py "$directory/app/client" "$directory/app/server"
+        LD_LIBRARY_PATH="$directory/app/lib" python3 test/client/integration.py "$directory/app/client" "$directory/app/server"
     else
         "$compiler" $flags -Iutil client/main.c util/io.c util/protocol.c util/logger.c -o "$directory/client"
         python3 test/client/integration.py "$directory/client"

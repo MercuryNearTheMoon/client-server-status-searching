@@ -15,6 +15,6 @@ client 和 server 使用 `-Lbuild/lib -lcommon` 動態連結同一份函式庫�
 執行檔的 RUNPATH 設為 `$ORIGIN/lib`；容器的 `LD_LIBRARY_PATH`
 也包含 `/workspace/build/lib`。
 
-目前 protocol 只定義固定 header 與指令編號；request/response payload
-格式及錯誤內容仍待實作前確認。Header 結構是主機記憶體表示，
+Protocol 的 request/response payload 與錯誤碼已定義於 `docs/server.md`。
+Header 結構是主機記憶體表示，
 不可直接透過 socket 傳送，必須明確編解碼為 12 bytes。

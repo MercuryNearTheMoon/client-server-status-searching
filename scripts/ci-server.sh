@@ -20,6 +20,6 @@ for mode in normal sanitized; do
     "$compiler" $flags -Iutil test/server/main.c util/io.c util/protocol.c util/logger.c -o "$directory/unit"
     "$directory/unit"
     make -B CC="$compiler" BUILD_DIR="$directory/app" CFLAGS="$flags" LDFLAGS="$link" "$directory/app/server"
-    python3 test/server/integration.py "$directory/app/server"
+    LD_LIBRARY_PATH="$directory/app/lib" python3 test/server/integration.py "$directory/app/server"
     echo "PASS server/main $mode"
 done
