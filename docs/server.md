@@ -87,7 +87,9 @@ SIGTERM/SIGINT 停止 accept，終止並回收所有 child，再移除 cache。
 透過 Linux /proc 獨立檢查 child PIDs 與回收，不使用正式 client 實作互相驗證。
 
 測試先跑一般建置，再以 ASan/UBSan 重跑；`SANITIZE=0` 可明確略過。
-實際 tcpdump 證據、分析與獨立 robustness before/after demo 見 `submission/`。
+Repository不包含本機 `submission/` 證據。執行
+`docker compose run --rm compile sh scripts/collect-evidence.sh`
+可重新產生tcpdump、分析與獨立robustness before/after結果。
 
 ## 本次驗證
 
@@ -98,5 +100,5 @@ SIGTERM/SIGINT 停止 accept，終止並回收所有 child，再移除 cache。
 - Protocol 28 測項、I/O 16 測項、logger 等級矩陣與 sanitizer。
 - `ldd build/server` 確認載入 `/workspace/build/lib/libcommon.so`。
 
-測試紀錄在忽略提交的 `build/server-tests.log` 與
-`build/server-linux-validation.log`。後續完整測試與封包證據另存 `submission/evidence/`。
+上述為開發時的驗證紀錄，原始log與 `submission/evidence/` 不隨repository提交。
+可執行本文件的測試指令與收集腳本重新驗證；實際PID、port與環境數值會隨執行改變。
