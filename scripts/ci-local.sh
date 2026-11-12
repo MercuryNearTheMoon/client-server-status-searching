@@ -14,6 +14,10 @@ case "${1:-all}" in
 esac
 
 for unit in $units; do
+    set -- "test/$unit.c" "$unit.c"
+    if [ "$unit" != util/logger ]; then
+        set -- "$@" util/logger.c
+    fi
     test_dir="build/tests/$unit"
     mkdir -p "$test_dir"
     for debug in 0 1; do
@@ -22,27 +26,10 @@ for unit in $units; do
             binary="$test_dir/$name"
             "$compiler" -std=c11 -Wall -Wextra -Wpedantic -Werror -I. \
                 -DENABLE_DEBUG="$debug" -DSYSINFO_COMPILE_LOG_LEVEL="$level" \
-                "test/$unit.c" "$unit.c" -o "$binary"
+                "$@" -o "$binary"
             if ! "$binary" > "$binary.stdout" 2> "$binary.stderr"; then
                 cat "$binary.stdout" "$binary.stderr"
                 exit 1
-            fi
-            if [ "$unit" = util/logger ]; then
-                # Dedicated logging test: one diagnostic per enabled level.
-                for entry in ERROR:0 WARN:1 INFO:2 DEBUG:3; do
-                    tag=${entry%%:*}
-                    threshold=${entry##*:}
-                    expected=1
-                    if [ "$level" -lt "$threshold" ] || { [ "$tag" = DEBUG ] && [ "$debug" = 0 ]; }; then
-                        expected=0
-                    fi
-                    actual=$(awk -v tag="[$tag]" 'index($0, tag) == 1 {n++} END {print n+0}' "$binary.stderr")
-                    if [ "$actual" -ne "$expected" ]; then
-                        echo "FAIL $unit $name: $tag count=$actual, expected=$expected" >&2
-                        cat "$binary.stderr"
-                        exit 1
-                    fi
-                done
             fi
             echo "PASS $unit $name"
         done
@@ -53,8 +40,8 @@ for unit in $units; do
         binary="$test_dir/sanitized"
         "$compiler" -std=c11 -Wall -Wextra -Wpedantic -Werror -g -I. \
             -fsanitize=address,undefined -fno-omit-frame-pointer \
-            -DSYSINFO_COMPILE_LOG_LEVEL=-1 \
-            "test/$unit.c" "$unit.c" -o "$binary"
+            -DENABLE_DEBUG=1 -DSYSINFO_COMPILE_LOG_LEVEL=3 \
+            "$@" -o "$binary"
         "$binary"
         echo "PASS $unit sanitizers"
     fi

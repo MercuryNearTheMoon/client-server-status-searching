@@ -19,10 +19,10 @@ sh scripts/ci-local.sh util/protocol
 15 個 decode 測項與 1 個 round-trip 測項，共 28 個。
 涵蓋固定 wire bytes、邊界值、非法欄位、NULL 指標、不對齊輸入，
 以及拒絕輸入時 output 不變。失敗時回傳非零 exit code。
-Encode 與 decode 均已實作；其餘應用程式功能仍為骨架。
+Protocol、I/O 與 logger 已實作；client/server 仍為骨架。
 
 測試依照 source 路徑拆分：`test/util/protocol.c` 測試 `util/protocol.c`，
-`test/util/logger.c` 獨立驗證 `util/logger.h` 的巨集過濾（正式 backend 尚未實作）。
+`test/util/logger.c` 驗證正式 logger、巨集過濾、runtime level、截斷、errno 與 fork 輸出。
 每個測試檔案有自己的 `main()`，可獨立編譯執行。
 `test/util/io.c` 有 16 個 socket I/O 測項，規格與提示見 [docs/io-spec.md](docs/io-spec.md)。
 `io.c` 已實作完整收送、EOF、EINTR、errno 保留與跨平台 SIGPIPE 防護。
@@ -34,27 +34,42 @@ Encode 與 decode 均已實作；其餘應用程式功能仍為骨架。
 `SANITIZE=0 make test`；可用 `make test CC=clang` 選擇編譯器。
 CI runner 也能執行同一個腳本，目前沒有部署步驟。
 
-### 暫時的 log 抽象
+### Logger
 
-已移除 mock logger；`util/logger.c` 仍未實作。
-`logger.h` 的 log 巨集目前直接輸出 stderr，以
-`SYSINFO_COMPILE_LOG_LEVEL` 選擇保留的等級：
+`util/logger.c` 已實作，log 巨集預設直接使用正式 backend，不需 `SYSINFO_USE_LOGGER`。
+輸出格式為 `[LEVEL] UTC時間 pid=程序編號 訊息`，目的地為 stderr。
+每筆最多 512 bytes（含換行），過長訊息以 `...` 結尾；訊息內 CR/LF 轉成空白。
+每筆使用一次 bounded write（EINTR 時重試），避免多次 fprintf 交錯。
+此設計對 pipe/FIFO 的 512-byte 寫入可提供原子性；一般終端與其他裝置不保證。
+輸出採 best effort，失敗不遞迴記錄或回傳錯誤；logger 保留呼叫前的 errno。
+不要從 signal handler 呼叫，也不保證對多執行緒的同步。
+
+`SYSINFO_COMPILE_LOG_LEVEL` 是編譯期上限：
 `-1` 關閉、`0` error、`1` warn、`2` info（預設）、`3` debug。
-debug 另外要求 `ENABLE_DEBUG=1`，各等級包含較嚴重的訊息。
-目前不支援 runtime level 切換。
+Runtime 預設 info，可用 `sysinfo_log_set_level(SYSINFO_LOG_DEBUG)` 調整。
+Debug 訊息必須同時滿足 `ENABLE_DEBUG=1`、編譯期上限為 3，以及 runtime level 為 debug。
+直接呼叫 `sysinfo_log()` 也會遵守過濾規則。無效 level 與 NULL format 會被忽略。
+fork 後 child 繼承當時的 runtime level，各 process 後續獨立修改。
 
-例如只編譯一份 debug 測試並查看診斷輸出：
+```c
+sysinfo_log_set_level(SYSINFO_LOG_DEBUG);
+SYSINFO_INFO_LOG("server starting on port %d", port);
+SYSINFO_DEBUG("connection fd=%d", fd);
+```
+
+Connection ID 尚由呼叫端放入訊息，例如 `"connection=%d ..."`。
+Logger 不會接管 SIGPIPE；若 stderr 導向已關閉的 pipe，仍依應用程式的 signal 設定處理。
+
+單獨編譯 protocol 測試時，需一起連結 logger：
 
 ```sh
 mkdir -p build
 cc -std=c11 -Wall -Wextra -Wpedantic -I. \
-  -DENABLE_DEBUG=1 -DSYSINFO_COMPILE_LOG_LEVEL=3 \
-  test/util/protocol.c util/protocol.c -o build/test-protocol
+  test/util/protocol.c util/protocol.c util/logger.c -o build/test-protocol
 ./build/test-protocol
 ```
 
-之後實作 `sysinfo_log()`，可設定 `SYSINFO_USE_LOGGER=1` 並連結
-`util/logger.c`，讓相同巨集改呼叫正式 logger。
+目前包含容器環境、Makefile 與共用函式庫實作；client/server 尚無 main() 定義。
 
 使用 Docker Compose 提供 `compile`、`server`、`client` 三個容器服務。
 三者使用相同 Debian 開發映像，包含 GCC、Make、CMake、GDB、

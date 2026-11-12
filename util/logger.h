@@ -8,17 +8,20 @@ enum sysinfo_log_level {
     SYSINFO_LOG_DEBUG = 3
 };
 
-/* Per-process runtime threshold; intended default is SYSINFO_LOG_INFO. */
+/* Per-process runtime threshold, default INFO. Invalid levels are ignored. */
 void sysinfo_log_set_level(enum sysinfo_log_level level);
 
 /* printf-style output to stderr. Pass untrusted text using "%s".
- * Implementation must also discard DEBUG when ENABLE_DEBUG is disabled.
+ * Preserves errno; invalid level / NULL format is ignored.
+ * Records include UTC timestamp and PID, are bounded to 512 bytes, and end
+ * with a newline. Long messages are truncated; embedded CR/LF become spaces.
+ * Best-effort output: write failures are not returned. Not signal-handler safe.
+ * Implementation also discards DEBUG when ENABLE_DEBUG is disabled.
  */
 void sysinfo_log(enum sysinfo_log_level level, const char *format, ...);
 
-/* Compile-time threshold: -1=off, 0=error, 1=warn, 2=info, 3=debug.
- * Until logger.c is implemented, use stderr directly. Set SYSINFO_USE_LOGGER=1
- * once the real backend is implemented. Disabled calls do not evaluate args.
+/* Compile-time ceiling: -1=off, 0=error, 1=warn, 2=info, 3=debug.
+ * Runtime level further filters output. Disabled macros do not evaluate args.
  */
 #ifndef SYSINFO_COMPILE_LOG_LEVEL
 #define SYSINFO_COMPILE_LOG_LEVEL 2
@@ -27,17 +30,7 @@ void sysinfo_log(enum sysinfo_log_level level, const char *format, ...);
 #error "SYSINFO_COMPILE_LOG_LEVEL must be -1..3"
 #endif
 
-#if defined(SYSINFO_USE_LOGGER) && SYSINFO_USE_LOGGER
 #define SYSINFO_LOG_WRITE(level, label, ...) sysinfo_log(level, __VA_ARGS__)
-#else
-#include <stdio.h>
-#define SYSINFO_LOG_WRITE(level, label, ...) \
-    do { \
-        fprintf(stderr, "[%s] ", label); \
-        fprintf(stderr, __VA_ARGS__); \
-        fputc('\n', stderr); \
-    } while (0)
-#endif
 
 #if SYSINFO_COMPILE_LOG_LEVEL >= 0
 #define SYSINFO_ERROR_LOG(...) SYSINFO_LOG_WRITE(SYSINFO_LOG_ERROR, "ERROR", __VA_ARGS__)
