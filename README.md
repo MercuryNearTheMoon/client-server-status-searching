@@ -11,6 +11,7 @@ make test
 make test UNIT=util/protocol
 make test UNIT=util/logger
 make test UNIT=util/io
+make test UNIT=client/main
 # 等同於
 sh scripts/ci-local.sh
 sh scripts/ci-local.sh util/protocol
@@ -20,7 +21,7 @@ sh scripts/ci-local.sh util/protocol
 15 個 decode 測項與 1 個 round-trip 測項，共 28 個。
 涵蓋固定 wire bytes、邊界值、非法欄位、NULL 指標、不對齊輸入，
 以及拒絕輸入時 output 不變。失敗時回傳非零 exit code。
-Protocol、I/O 與 logger 已實作；Linux server 已實作，client 仍為骨架。
+Protocol、I/O、logger、client 與 Linux server 均已實作。
 
 測試依照 source 路徑拆分：`test/util/protocol.c` 測試 `util/protocol.c`，
 `test/util/logger.c` 驗證正式 logger、巨集過濾、runtime level、截斷、errno 與 fork 輸出。
@@ -29,7 +30,9 @@ Protocol、I/O 與 logger 已實作；Linux server 已實作，client 仍為骨�
 `io.c` 已實作完整收送、EOF、EINTR、errno 保留與跨平台 SIGPIPE 防護。
 可用 `make test UNIT=util/io` 單獨驗證。Server 測試使用 Linux：
 `docker compose run --rm compile make test UNIT=server/main`。
-Server 指令、協定與測試規格見 [docs/server.md](docs/server.md)。client 尚無測試。
+Server 指令、協定與測試規格見 [docs/server.md](docs/server.md)。
+Client 參數、多指令連線與測試見 [docs/client.md](docs/client.md)。
+Client 測試在 macOS 會略過真實 Linux server 的互通案例，Docker 內則全部執行。
 
 測試矩陣包含 `ENABLE_DEBUG=0/1` 與五種編譯期 log level；logger unit 驗證 stderr
 的等級過濾。最後執行 AddressSanitizer 與 UndefinedBehaviorSanitizer。
@@ -72,16 +75,16 @@ cc -std=c11 -Wall -Wextra -Wpedantic -I. \
 ./build/test-protocol
 ```
 
-目前包含容器環境、Makefile、共用函式庫與 Linux server；client 尚無 main() 定義。
+目前包含容器環境、Makefile、共用函式庫、client 與 Linux server。
 
 使用 Docker Compose 提供 `compile`、`server`、`client` 三個容器服務。
 三者使用相同 Debian 開發映像，包含 GCC、Make、CMake、GDB、
 `readelf`、`ps`、`ss` 與 `tcpdump`，並將專案掛載至 `/workspace`。
-目前已完成共用函式庫與 Linux server，client 仍是程式骨架。
+Client 與 server 均可透過容器執行。
 
 程式結構：`client/main.c` 放 client 流程，`server/main.c` 放 server 流程、
 sysinfo 查詢與 shared-memory lazy TTL cache；共用介面及實作放在 `util/`。
-Server 可用 `make server` 建置；client/main.c 仍是 TODO 骨架。
+可用 `make client`、`make server` 分別建置，或用 `make` 一次建置兩者。
 
 ## 建立環境與編譯
 
@@ -92,7 +95,7 @@ docker compose build
 docker compose run --rm compile bash
 ```
 
-上面的指令可直接進入 Linux 編譯環境。完成程式實作後，可以執行：
+上面的指令可直接進入 Linux 編譯環境。也可以直接執行：
 
 ```sh
 docker compose run --rm compile
@@ -100,8 +103,7 @@ docker compose run --rm compile
 docker compose run --rm compile make ENABLE_DEBUG=1
 ```
 
-目前 client 尚無 `main()` 定義，完整 `make` 預期會在 client 連結階段失敗。
-請使用 `docker compose run --rm compile make server` 建置已完成的 server。
+預設 `make` 會建置 client、server 與共用函式庫。
 可先執行 `docker compose run --rm compile make objects`，只編譯 object files。
 Makefile 以 Linux 為目標，產物為 `build/client`、`build/server` 與
 `build/lib/libcommon.so`；執行檔透過 `$ORIGIN/lib` 尋找共用函式庫。

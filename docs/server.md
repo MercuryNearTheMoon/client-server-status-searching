@@ -15,7 +15,7 @@ docker compose run --rm compile make test UNIT=server/main
 
 Linux 主機可直接 `make server`、`make test UNIT=server/main`。
 Server 動態連結 `build/lib/libcommon.so`，使用 `$ORIGIN/lib` 尋找函式庫。
-Client 尚未實作，因此請使用 `make server` 而非預設會同時建置 client 的 `make`。
+Client 已實作；`make` 同時建置 client/server，也可用 `make server` 單獨建置。
 macOS `make test` 會明確略過 Linux server；指定 server unit 則提示用 Docker。
 
 | CLI | 預設 | 範圍／意義 |

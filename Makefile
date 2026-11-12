@@ -16,10 +16,12 @@ LIBRARY := $(BUILD_DIR)/lib/libcommon.so
 CLIENT := $(BUILD_DIR)/client
 SERVER := $(BUILD_DIR)/server
 
-.PHONY: all objects clean test server
+.PHONY: all objects clean test server client
 all: $(CLIENT) $(SERVER)
 
 server: $(SERVER)
+
+client: $(CLIENT)
 
 test:
 	CC="$(CC)" sh scripts/ci-local.sh "$(if $(UNIT),$(UNIT),all)"
