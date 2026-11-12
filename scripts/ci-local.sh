@@ -4,13 +4,13 @@ set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 compiler=${CC:-cc}
 if [ "$#" -gt 1 ]; then
-    echo "Usage: sh scripts/ci-local.sh [all|util/protocol|util/logger]" >&2
+    echo "Usage: sh scripts/ci-local.sh [all|util/protocol|util/logger|util/io]" >&2
     exit 2
 fi
 case "${1:-all}" in
-    all|'') units='util/protocol util/logger' ;;
-    util/protocol|util/logger) units=$1 ;;
-    *) echo "Unknown unit: $1 (available: util/protocol, util/logger)" >&2; exit 2 ;;
+    all|'') units='util/protocol util/logger util/io' ;;
+    util/protocol|util/logger|util/io) units=$1 ;;
+    *) echo "Unknown unit: $1 (available: util/protocol, util/logger, util/io)" >&2; exit 2 ;;
 esac
 
 for unit in $units; do

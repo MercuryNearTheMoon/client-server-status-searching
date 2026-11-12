@@ -9,6 +9,7 @@ make test
 # 只測一個 unit
 make test UNIT=util/protocol
 make test UNIT=util/logger
+make test UNIT=util/io
 # 等同於
 sh scripts/ci-local.sh
 sh scripts/ci-local.sh util/protocol
@@ -23,7 +24,9 @@ Encode 與 decode 均已實作；其餘應用程式功能仍為骨架。
 測試依照 source 路徑拆分：`test/util/protocol.c` 測試 `util/protocol.c`，
 `test/util/logger.c` 獨立驗證 `util/logger.h` 的巨集過濾（正式 backend 尚未實作）。
 每個測試檔案有自己的 `main()`，可獨立編譯執行。
-未實作的 io、client、server 尚無測試；之後沿用相同路徑並加入腳本的 unit 清單。
+`test/util/io.c` 有 16 個 socket I/O 測項，規格與提示見 [docs/io-spec.md](docs/io-spec.md)。
+`io.c` 已實作完整收送、EOF、EINTR、errno 保留與跨平台 SIGPIPE 防護。
+可用 `make test UNIT=util/io` 單獨驗證。client/server 尚無測試。
 
 測試矩陣包含 `ENABLE_DEBUG=0/1` 與五種編譯期 log level；logger unit 驗證 stderr
 的等級過濾。最後執行 AddressSanitizer 與 UndefinedBehaviorSanitizer。

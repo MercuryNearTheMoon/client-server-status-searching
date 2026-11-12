@@ -13,6 +13,7 @@ enum sysinfo_io_result {
 /* Blocking socket helpers. Retry EINTR and handle short reads/writes.
  * A zero length succeeds immediately. These interfaces impose no deadline;
  * callers must configure socket timeouts when bounded waits are required.
+ * A NULL buffer with nonzero length returns ERROR with errno=EINVAL.
  * On ERROR, errno describes the failure; partial transfer is possible.
  */
 
